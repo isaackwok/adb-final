@@ -1,0 +1,191 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+
+    <head>
+        <!-- Bootstrap core CSS -->
+        <link href="{% static 'bootstrap-4.0.0/dist/css/bootstrap.min.css' %}" rel="stylesheet">
+
+        <!-- Custom styles for this template -->
+        <link href="{% static 'css/main_frame.css' %}" rel="stylesheet">
+        <link href="{% static 'bootstrap4-toggle-3.6.1/css/bootstrap4-toggle.min.css' %}" rel="stylesheet">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.9/dist/css/bootstrap-select.min.css"
+            rel="stylesheet">
+        <link href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    </head>
+
+    <body class="pt-3 px-4">
+        <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+            <h1 class="h2">Find Courses</h1>
+        </div>
+        <form id="filter" action="{% url 'find_course' %}" method="GET">
+            <div class="alert alert-info" class='filter_area' role="alert">
+                <input class="form-control" id="search_course" name="course_name" type="text"
+                    placeholder="Search course...">
+
+                <div class="row" style="padding-left: 1rem;">
+                    <div class="form-check form-check-inline">
+                        <div class="form-check form-check-inline">Language: </div>
+                        <input class="form-check-input" type="radio" name="language" id="language_all" value="" checked>
+                        <label class="form-check-label form-check-inline" for="language_all">
+                            All
+                        </label>
+                        <input class="form-check-input" type="radio" name="language" id="language_CH" value="CH">
+                        <label class="form-check-label form-check-inline" for="language_CH">
+                            CH
+                        </label>
+                        <input class="form-check-input" type="radio" name="language" id="language_all" value="EN">
+                        <label class="form-check-label form-check-inline" for="language_EN">
+                            EN
+                        </label>
+                    </div>
+                </div>
+                <div class="row" style="padding-left: 1rem;padding-bottom: 1rem;width: fit-content;">
+                    Provider:
+                    <select id="provider_filter" name="provider" multiple data-style="bg-white rounded-pill shadow-sm "
+                        class="selectpicker w-100">
+                        <option value='' selected>All</option>
+                        <option>Coursera</option>
+                        <option>eWant</option>
+                        <option>MIT</option>
+                        <option>TaiwanMOOC</option>
+                        <option>Udacity</option>
+                        <option>TaiwanSchool</option>
+                        <option>Oxford</option>
+                    </select><!-- End -->
+                </div>
+                <button class="btn btn-primary" type="submit"><span class="oi oi-magnifying-glass"></span> Search</button>
+            </div>
+        </form>
+        <div id="course_list" class="list-group">
+            {% for course in courses %}
+            <a href="#" class="list-group-item list-group-item-action justify-content-between align-items-center "
+                data-toggle="modal" data-target="#courseModal_{{ course.n.course_id }}" courseid="{{ course.n.course_id }}" >
+                {% if course.n.language == 'EN' %}
+                <span class="badge badge-success badge-pill" style="right: 0">
+                    {{ course.n.language }}
+                </span>
+                {% elif course.n.language == 'CH' %}
+                <span class="badge badge-primary badge-pill" style="right: 0">
+                    {{ course.n.language }}
+                </span>
+                {% endif %}
+                <span class="badge badge-warning badge-pill" style="right: 0">
+                    {{ course.n.provider }}
+                </span>
+                {{ course.n.course_name }}
+                <button class="btn btn-success btn-sm float-right take-course" value="{{ course.n.course_id }}"><span class="oi oi-task"></span></button>
+            </a>
+            {% endfor %}
+            <!-- <a href="#" class="list-group-item list-group-item-action disabled">Vestibulum at eros</a> -->
+        </div>
+        <!-- FOOTER -->
+        <hr />
+        <footer class="container">
+            <p class="float-right"><a href="#">Back to top</a></p>
+            <p>&copy; 2019-2020 Advanced Database Systems.</p>
+        </footer>
+
+        <script>
+            window.jQuery || document.write('<script src="{% static "bootstrap-4.0.0/assets/js/vendor/jquery-3.4.1.min.js" %}"><\/script>')
+        </script>
+        <script src="{% static 'bootstrap-4.0.0/assets/js/vendor/popper.min.js' %}"></script>
+        <script src="{% static 'bootstrap4-toggle-3.6.1/js/bootstrap4-toggle.min.js' %}"></script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.9/dist/js/bootstrap-select.min.js"></script>
+        <script>
+            $(document).ready(function () {
+                $('#course_list a').click(function(e){
+                    var self = $(this);
+                    $.get("{% url 'related_domain' %}?" + 'course_id=' + $(this).attr('courseid'),function(data){
+                        var json = $.parseJSON(data)
+                        $('#related_domain_' + self.attr('courseid')).remove();
+                        var related_domain_div = document.createElement("div");
+                        related_domain_div.id = 'related_domain_' + self.attr('courseid');
+                        json.forEach(element => {
+                            var ahref = document.createElement("a");
+                            ahref.setAttribute("href","{% url 'info' %}?related_domain=" + element);
+                            ahref.innerHTML = element;
+                            related_domain_div.appendChild(ahref)
+                            related_domain_div.appendChild(document.createElement("br"))
+                            $('#courseModal_' + self.attr('courseid') + ' .modal-body').append(related_domain_div);
+                        });
+                    });
+                });
+                $("#filter #search_course").keypress(function (e) {
+                    if (e.which == 13)
+                        $("#filter").submit();
+                });
+                $("#provider_filter").change(function () {
+                    if ($(this).val().includes(''))
+                        $(this).val(['']);
+                });
+                $('.selectpicker').selectpicker();
+                $('.take-course').click(function (e) {
+                    console.log('check');
+                    e.stopPropagation();
+                    e.preventDefault();
+                    $.ajaxSetup({
+                        headers: {'X-CSRFToken': getCSRFToken()},
+                        data:{
+                            course_id: $(this).val(),
+                            username: '{{ username }}'
+                        },
+                        statusCode:{
+                            201: function(response){alert('成功加選! You\'ve take the course successfully!')},
+                            202: function(response){alert('此課程已在你的清單中! You already took this course!')},
+                        }
+                    });
+                    $.post("{% url 'take_course' %}");
+                });
+            });
+            function getCSRFToken() {
+                var cookieValue = null;
+                if (document.cookie && document.cookie != '') {
+                    var cookies = document.cookie.split(';');
+                    for (var i = 0; i < cookies.length; i++) {
+                        var cookie = jQuery.trim(cookies[i]);
+                        if (cookie.substring(0, 10) == ('csrftoken' + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(10));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+        </script>
+        <!-- Modal -->
+        {% for course in courses %}
+        <div class="modal fade" style="background-color: transparent;" id="courseModal_{{ course.n.course_id }}"
+            tabindex="-1" role="dialog" aria-labelledby="courseModalTitle_{{ course.n.course_id }}" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="courseModalTitle_{{ course.n.course_id }}">{{ course.n.course_name }}
+                        </h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                            {% if course.n.description != "" %} {{ course.n.description }} {% else %} This course has no
+                            description. {% endif %}
+                            <hr /> Language: <a href="{% url 'info' %}?language={{ course.n.language }}">{{ course.n.language }}</a>
+                            <br /> Instructor:{% for ins in course.n.instructor_name %}<a href="{% url 'info' %}?instructor={{ ins }}"> {{ ins }}</a>{% if forloop.last %}{% else %}
+                             &{% endif %}{% endfor %}
+                            <br />
+                            Provider: <a href="{% url 'info' %}?provider={{ course.n.provider }}">{{ course.n.provider }}</a>
+                            <br />
+                            Related Domain: {% for domain in related_domain %}<a href="{% url 'info' %}?related_domain={{ domain }}"> {{ domain }}</a>{% if forloop.last %}{% else %}
+                            &{% endif %}{% endfor %}
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                        <a href="{{ course.n.directlink }}" target="_blank" class="btn btn-info">Details</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </body>
+
+</html>
